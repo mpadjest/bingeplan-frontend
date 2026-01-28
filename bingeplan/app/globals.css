@@ -1,26 +1,93 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: light;
+  }
+  
+  html {
+    background-color: #f9fafb; /* gray-50 */
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* --- REACT BIG CALENDAR OVERRIDES (Light Mode Only) --- */
+
+/* 1. General Container */
+.rbc-calendar {
+  @apply font-sans text-gray-900 bg-white; 
+}
+
+/* 2. Toolbar (Buttons) */
+.rbc-toolbar {
+  @apply mb-4 flex gap-2;
+}
+
+.rbc-toolbar button {
+  @apply text-gray-700 bg-white border border-gray-300 rounded px-3 py-1 text-sm font-medium hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100 transition-none;
+}
+
+.rbc-toolbar button.rbc-active {
+  @apply bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm z-10;
+}
+
+/* 3. Header Cells (Days of week) */
+.rbc-header {
+  @apply p-3 font-bold text-gray-700 border-b border-gray-200 bg-gray-50 uppercase text-xs tracking-wider;
+}
+
+/* 4. Grid Borders & Backgrounds */
+.rbc-month-view, 
+.rbc-time-view,
+.rbc-agenda-view {
+  @apply border border-gray-300 bg-white rounded-lg overflow-hidden shadow-sm;
+}
+
+.rbc-day-bg + .rbc-day-bg,
+.rbc-month-row + .rbc-month-row,
+.rbc-time-header-content {
+  @apply border-gray-200;
+}
+
+/* 5. Today Highlight */
+.rbc-day-bg.rbc-today {
+  @apply bg-blue-50;
+}
+
+/* 6. Off-range days (Grayed out) */
+.rbc-off-range-bg {
+  @apply bg-gray-100;
+}
+
+/* 7. Events */
+.rbc-event {
+  @apply bg-blue-600 text-white border-none rounded shadow-sm px-2 py-1 text-xs font-semibold;
+}
+
+.rbc-event.rbc-selected {
+  @apply bg-blue-800;
+}
+
+/* 8. Time Slots */
+.rbc-timeslot-group {
+  @apply border-gray-100;
+}
+.rbc-time-content {
+  @apply border-gray-200;
+}
+.rbc-day-slot .rbc-time-slot {
+  @apply border-gray-100;
+}
+
+/* --- MODAL STYLES (No Animation) --- */
+
+.modal-overlay {
+  @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4;
+}
+
+.modal-content {
+  @apply bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative border border-gray-200;
 }

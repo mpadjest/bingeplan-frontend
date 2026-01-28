@@ -1,65 +1,179 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect, useCallback } from 'react';
+import { Calendar, dateFnsLocalizer, Views, View } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay } from "date-fns";
+import { enUS } from "date-fns/locale/en-US";
+import api from '@/services/api';
+import { useAuth } from '@/context/AuthContext';
+import Sidebar from '@/components/Sidebar';
+import EventModal from '@/components/EventModal';
+import { toast } from 'react-toastify';
+import { addWeeks } from 'date-fns';
+
+// Setup Localizer
+const locales = {
+  'en-US': enUS,
+};
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
+
+interface CalendarEvent {
+  id?: number;
+  title: string;
+  start: Date;
+  end: Date;
+  description?: string;
+}
+
+export default function CalendarPage() {
+  const { user, loading } = useAuth();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  
+  // CONTROLLED STATE (Fixes unresponsiveness)
+  const [view, setView] = useState<View>(Views.MONTH);
+  const [date, setDate] = useState(new Date());
+
+  // Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedEvent, setSelectedEvent] = useState<any | undefined>(undefined);
+
+  // Fetch Events
+  const fetchEvents = useCallback(async () => {
+    try {
+      const res = await api.get('/events');
+      const formattedEvents = res.data.map((e: any) => ({
+        ...e,
+        start: new Date(e.start), // Ensure Date Object
+        end: new Date(e.end),     // Ensure Date Object
+      }));
+      setEvents(formattedEvents);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load events');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) fetchEvents();
+  }, [user, fetchEvents]);
+
+  // Handlers for Calendar Control
+  const handleNavigate = (newDate: Date) => setDate(newDate);
+  const handleViewChange = (newView: View) => setView(newView);
+
+  // Interaction Handlers
+  const handleSelectSlot = ({ start }: { start: Date }) => {
+    setSelectedEvent(undefined);
+    setSelectedDate(start);
+    setModalOpen(true);
+  };
+
+  const handleSelectEvent = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setSelectedDate(undefined);
+    setModalOpen(true);
+  };
+
+  // Submit Handler
+  const handleEventSubmit = async (data: any, episodes: number) => {
+    try {
+      if (selectedEvent && selectedEvent.id) {
+        await api.put(`/events/${selectedEvent.id}`, data);
+        toast.success('Event updated');
+      } else {
+        const eventsPayload = [];
+        const baseStart = new Date(data.start);
+        const baseEnd = new Date(data.end);
+
+        for (let i = 0; i < episodes; i++) {
+          const shiftWeeks = i;
+          const currentStart = addWeeks(baseStart, shiftWeeks);
+          const currentEnd = addWeeks(baseEnd, shiftWeeks);
+
+          eventsPayload.push({
+            ...data,
+            title: episodes > 1 ? `${data.title} (Ep ${i + 1})` : data.title,
+            start: currentStart.toISOString(),
+            end: currentEnd.toISOString(),
+          });
+        }
+        await api.post('/events/batch', eventsPayload);
+        toast.success(episodes > 1 ? `${episodes} episodes scheduled` : 'Event created');
+      }
+      fetchEvents();
+    } catch (err) {
+      console.error(err);
+      toast.error('Operation failed');
+    }
+  };
+
+  const handleDeleteEvent = async (id: number) => {
+    if (!confirm('Delete this event?')) return;
+    try {
+      await api.delete(`/events/${id}`);
+      toast.info('Event deleted');
+      setModalOpen(false);
+      fetchEvents();
+    } catch (err) {
+      toast.error('Failed to delete');
+    }
+  };
+
+  if (loading) return <div className="flex h-screen items-center justify-center dark:bg-gray-900 dark:text-white">Loading...</div>;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      <Sidebar />
+      <main className="flex-1 md:ml-64 p-4 md:p-6 overflow-hidden flex flex-col h-screen">
+        
+        <header className="mb-6 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">My Watch Schedule</h1>
+          <button 
+            onClick={() => handleSelectSlot({ start: new Date() })}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md transition-all hover:shadow-lg active:scale-95"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            + Add Plan
+          </button>
+        </header>
+
+        <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 overflow-hidden">
+          <Calendar
+            localizer={localizer}
+            events={events}
+            startAccessor="start"
+            endAccessor="end"
+            
+            // Controlled Props (Fixes unresponsiveness)
+            view={view}
+            date={date}
+            onNavigate={handleNavigate}
+            onView={handleViewChange}
+            
+            style={{ height: '100%' }}
+            selectable
+            onSelectSlot={handleSelectSlot}
+            onSelectEvent={handleSelectEvent}
+            views={[Views.MONTH, Views.WEEK, Views.DAY]}
+          />
         </div>
       </main>
+
+      <EventModal 
+        isOpen={modalOpen} 
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleEventSubmit}
+        onDelete={handleDeleteEvent}
+        initialDate={selectedDate}
+        initialEvent={selectedEvent}
+      />
     </div>
   );
 }
