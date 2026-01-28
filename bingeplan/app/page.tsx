@@ -10,6 +10,7 @@ import Sidebar from '@/components/Sidebar';
 import EventModal from '@/components/EventModal';
 import { toast } from 'react-toastify';
 import { addWeeks } from 'date-fns';
+import { RefreshCw } from 'lucide-react';
 
 // Setup Localizer
 const locales = {
@@ -44,6 +45,33 @@ export default function CalendarPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedEvent, setSelectedEvent] = useState<any | undefined>(undefined);
+
+  const handleSyncGoogle = async () => {
+    // Optional: Check if user is connected first to give better feedback
+    if (!user?.is_google_connected) {
+      toast.error("Please connect Google Calendar in your Profile first.");
+      return;
+    }
+
+    const toastId = toast.loading("Syncing with Google...");
+    try {
+      const res = await api.post('/events/sync-google');
+      toast.update(toastId, { 
+        render: res.data.message, 
+        type: "success", 
+        isLoading: false, 
+        autoClose: 3000 
+      });
+    } catch (err: any) {
+      toast.update(toastId, { 
+        render: "Sync failed. Try reconnecting in Profile.", 
+        type: "error", 
+        isLoading: false, 
+        autoClose: 3000 
+      });
+    }
+  };
+
 
   // Fetch Events
   const fetchEvents = useCallback(async () => {
@@ -134,14 +162,27 @@ export default function CalendarPage() {
       <Sidebar />
       <main className="flex-1 md:ml-64 p-4 md:p-6 overflow-hidden flex flex-col h-screen">
         
-        <header className="mb-6 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">My Watch Schedule</h1>
-          <button 
-            onClick={() => handleSelectSlot({ start: new Date() })}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md transition-all hover:shadow-lg active:scale-95"
-          >
-            + Add Plan
-          </button>
+        <header className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+            My Watch Schedule
+          </h1>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSyncGoogle}
+              className="flex items-center gap-2 border border-green-200 bg-green-50 px-4 py-2.5 font-medium text-green-700 shadow-sm transition-all hover:bg-green-100 active:scale-95 dark:border-green-900 dark:bg-green-900/30 dark:text-green-400"
+              title="Sync to Google Calendar"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Sync with Google</span>
+            </button>
+            <button
+              onClick={() => handleSelectSlot({ start: new Date() })}
+              className="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white shadow-md transition-all hover:bg-blue-700 hover:shadow-lg active:scale-95"
+            >
+              + Add Plan to watch event
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 overflow-hidden">

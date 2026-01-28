@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { X, Trash2 } from 'lucide-react';
-import { addWeeks, format } from 'date-fns';
+import { format } from 'date-fns';
+import ConfirmationModal from './ConfirmationModal';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ interface EventModalProps {
 export default function EventModal({ isOpen, onClose, onSubmit, onDelete, initialDate, initialEvent }: EventModalProps) {
   const { register, handleSubmit, setValue, reset, watch } = useForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -126,19 +129,26 @@ export default function EventModal({ isOpen, onClose, onSubmit, onDelete, initia
             </button>
             
             {initialEvent && onDelete && (
-              <button 
-                type="button" 
-                onClick={() => onDelete(initialEvent.id)}
-                className="btn-danger px-4"
-              >
+               <button 
+                  type="button" 
+                  onClick={() => setShowDeleteConfirm(true)} 
+                  className="btn-danger px-4"
+                >
                 <Trash2 className="w-5 h-5" />
               </button>
             )}
           </div>
         </form>
       </div>
-      
-      {/* Helper styles for this component */}
+      <ConfirmationModal 
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => onDelete && onDelete(initialEvent.id)}
+        title="Delete Event?"
+        message="Are you sure you want to remove this event from your plan? This cannot be undone."
+        confirmText="Delete"
+        isDangerous={true}
+      />
       <style jsx>{`
         .input-field {
           @apply w-full p-2 rounded-md border border-gray-300 dark:border-gray-600 dark:bg-gray-700 focus:ring-2 ring-blue-500 outline-none transition-all;

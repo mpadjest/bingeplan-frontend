@@ -6,13 +6,14 @@ import Sidebar from '@/components/Sidebar';
 import api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-toastify';
-// Import Unlink icon
+import ConfirmationModal from '@/components/ConfirmationModal';
 import { Save, User, CloudLightning, RefreshCw, Unlink } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   const { register, handleSubmit, setValue } = useForm();
   const [loading, setLoading] = useState(false);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -63,6 +64,16 @@ export default function ProfilePage() {
         toast.update(toastId, { render: res.data.message, type: "success", isLoading: false, autoClose: 3000 });
     } catch (err: any) {
         toast.update(toastId, { render: "Sync failed. Connect account first?", type: "error", isLoading: false, autoClose: 3000 });
+    }
+  };
+
+   const confirmDisconnect = async () => {
+    try {
+      await api.post('/auth/google/disconnect');
+      await refreshUser();
+      toast.success('Google Calendar disconnected');
+    } catch (err) {
+      toast.error('Failed to disconnect');
     }
   };
 
@@ -143,7 +154,7 @@ export default function ProfilePage() {
 
                       <button
                         type="button"
-                        onClick={handleDisconnectGoogle}
+                        onClick={() => setShowDisconnectModal(true)}
                         className="flex items-center justify-center gap-2 bg-white border border-red-200 text-red-600 px-4 py-2 rounded-lg hover:bg-red-50 transition-colors shadow-sm font-medium"
                       >
                         <Unlink className="w-4 h-4" />
@@ -167,6 +178,15 @@ export default function ProfilePage() {
             </div>
           </form>
         </div>
+                <ConfirmationModal 
+            isOpen={showDisconnectModal}
+            onClose={() => setShowDisconnectModal(false)}
+            onConfirm={confirmDisconnect}
+            title="Disconnect Google Account?"
+            message="This will stop syncing events to your Google Calendar. Existing events on Google will not be deleted."
+            confirmText="Disconnect"
+            isDangerous={true}
+        />
       </main>
     </div>
   );
