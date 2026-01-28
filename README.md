@@ -1,9 +1,9 @@
-Wprowadź następujące komendy:
+# Wprowadź następujące komendy:
 cd bingeplan
 npm install
 npm run dev
 
-Go to:
+# Go to:
  http://localhost:3000
 
 Podczas autoryzacji google calendar pojawi się "Google hasn't verified this app" warning.
