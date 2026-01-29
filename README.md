@@ -1,8 +1,8 @@
 # Wprowadź następujące komendy:
 
-cd bingeplan
-
 npm install
+
+cd bingeplan
 
 npm run dev
 
